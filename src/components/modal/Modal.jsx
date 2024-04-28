@@ -1,21 +1,52 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   useAddProductMutation,
+  useGetSingleProductQuery,
   useUpdateProductMutation,
 } from "../../redux/InspireApis";
 import { enqueueSnackbar } from "notistack";
 
-const Modal = ({ id }) => {
+const InputField = ({ type, name, value, onChange, placeholder }) => (
+  <input
+    type={type}
+    name={name}
+    value={value}
+    onChange={onChange}
+    className="px-[16px] py-[14px] text-[#303031] bg-[#F9FAFB] outline-none placeholder:text-[#303031] border-[1px] border-[#EDF2F6] rounded-[8px]"
+    placeholder={placeholder}
+  />
+);
+
+const Modal = ({ id, onClose }) => {
   const [addProduct, { isLoading: addLoading }] = useAddProductMutation();
   const [updateProduct, { isLoading: updateLoading }] =
     useUpdateProductMutation();
+  const { data: getSingleProduct } = useGetSingleProductQuery(id);
+  const [selectImage, setSelectImage] = useState()
   const [formData, setFormData] = useState({
     name: "",
     price: "",
     description: "",
     discount: "",
     flavorType: "",
+    image: null,
   });
+
+  useEffect(() => {
+    if (id && getSingleProduct) {
+      const { name, price, detail, discount, flavor, image } = getSingleProduct.data.attributes;
+      const { url } = image?.data?.attributes?.formats?.small || { url: null };
+
+      setFormData({
+        name,
+        price,
+        description: detail,
+        discount,
+        flavorType: flavor,
+        image: url
+      });
+    }
+  }, [id, getSingleProduct]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -24,70 +55,44 @@ const Modal = ({ id }) => {
       [name]: value,
     }));
   };
-  const isValueEmpty = (value) => {
-    if (value === null || value === undefined) {
-      return true;
-    }
-    if (typeof value === "string" && value.trim() === "") {
-      return true;
-    }
-    if (Array.isArray(value) && value.length === 0) {
-      return true;
-    }
-    if (typeof value === "object" && Object.keys(value).length === 0) {
-      return true;
-    }
-    return false;
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    setSelectImage(file);
   };
-  const handleValidation = () => {
-    const { name, price, description, discount, flavorType } = formData;
-    if (isValueEmpty(name)) {
-      enqueueSnackbar("Name is required", { variant: "error" });
-    }
-    if (isValueEmpty(price)) {
-      enqueueSnackbar("Price is required", { variant: "error" });
-    }
-    if (isValueEmpty(description)) {
-      enqueueSnackbar("Description is required", { variant: "error" });
-    }
-    if (isValueEmpty(discount)) {
-      enqueueSnackbar("Discount is required", { variant: "error" });
-    }
-    if (isValueEmpty(flavorType)) {
-      enqueueSnackbar("Flavor Type is required", { variant: "error" });
-    }
-    if (name && price && description && discount && flavorType) {
-      return false;
-    } else {
-      return true;
-    }
-  };
+
   const handleSubmit = async () => {
-    if (handleValidation()) {
-      return true;
-    }
-    const formattedData = {
-        name: formData.name,
-        price: Number(formData.price),
-        detail: formData.detail,
-        discount : Number(formData.discount),
-        flavor: formData.flavorType
-    };
     try {
+      if (!validateForm()) return;
+
+      const data = {
+        "data": {
+          name: formData.name,
+          price: Number(formData.price),
+          detail: formData.description,
+          discount: Number(formData.discount),
+          flavor: formData.flavorType,
+          image: selectImage ? URL.createObjectURL(selectImage) : null,
+        }
+      };
+
       if (id) {
-        await updateProduct({ id: id, formattedData });
+        await updateProduct({ id, data: data });
         enqueueSnackbar("Product updated successfully", { variant: "success" });
       } else {
-        await addProduct(formattedData);
+        await addProduct({ data: data });
         enqueueSnackbar("Product added successfully", { variant: "success" });
       }
+
       setFormData({
         name: "",
         price: "",
         description: "",
         discount: "",
         flavorType: "",
+        image: null,
       });
+      onClose()
     } catch (error) {
       console.error("Error submitting product:", error);
       enqueueSnackbar("An error occurred while processing the product", {
@@ -96,28 +101,35 @@ const Modal = ({ id }) => {
     }
   };
 
+  const validateForm = () => {
+    const { name, price, description, discount, flavorType, } = formData;
+    if (!name || !price || !description || !discount || !flavorType || !selectImage) {
+      enqueueSnackbar("All fields are required", { variant: "error" });
+      return false;
+    }
+    return true;
+  };
+
+  const showImage = selectImage ? URL.createObjectURL(selectImage) : getSingleProduct?.data?.attributes?.image?.data?.attributes?.formats?.small?.url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi_GoH2n5RWLY4_yw7wytfaj7X5VUoK9gmz3Mn2RTMBQ&s"
+  console.log(getSingleProduct, "getSingleProduct")
   return (
-    <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
+    <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
-        <span className="text-[#303031] font-[500] text-[28px]">
-          Edit Product
-        </span>
-        <span className="text-[#303031] text-[24px] cursor-pointer">X</span>
+        <span className="text-[#303031] font-[500] text-[28px]">Edit Product</span>
+        <span onClick={onClose} className="text-[#303031] text-[24px] cursor-pointer">X</span>
       </div>
-      <input
+      <InputField
         type="text"
         name="name"
         value={formData.name}
         onChange={handleChange}
-        className="px-[16px] py-[14px] text-[#303031] bg-[#F9FAFB] outline-none placeholder:text-[#303031] border-[1px] border-[#EDF2F6] rounded-[8px]"
         placeholder="Name"
       />
-      <input
+      <InputField
         type="text"
         name="price"
         value={formData.price}
         onChange={handleChange}
-        className="px-[16px] py-[14px] text-[#303031] bg-[#F9FAFB] outline-none placeholder:text-[#303031] border-[1px] border-[#EDF2F6] rounded-[8px]"
         placeholder="Price"
       />
       <textarea
@@ -145,7 +157,8 @@ const Modal = ({ id }) => {
           placeholder="Flavor Type"
         />
       </div>
-      <div className="flex items-center rounded-[10px] overflow-hidden w-fit relative">
+      <div className="flex items-center rounded-[10px] overflow-hidden w-fit relative max-w-[260px]">
+        <input type="file" onChange={handleImageChange} className="absolute h-[100%] w-[100%] opacity-[0]" />
         <div className="bg-[#EFB749] absolute top-2 right-2 rounded-[10px] p-[4px]">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -181,7 +194,7 @@ const Modal = ({ id }) => {
             />
           </svg>
         </div>
-        <img src="https://picsum.photos/id/234/200/200" alt="" />
+        <img src={showImage} alt="" className="" />
       </div>
       <div
         className="cursor-pointer text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
