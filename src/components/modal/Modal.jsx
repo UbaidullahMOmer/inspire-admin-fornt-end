@@ -1,13 +1,8 @@
 import React, { useEffect, useState } from "react";
-import {
-  useAddProductMutation,
-  useGetSingleProductQuery,
-  useUpdateProductMutation,
-} from "../../redux/InspireApis";
 import { enqueueSnackbar } from "notistack";
-import Config from "../../constants/Index";
-import axios from "axios";
-
+import { collection, addDoc, deleteDoc, getDoc, doc } from "firebase/firestore";
+import { db, storage } from "../../firebase/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 const InputField = ({ type, name, value, onChange, placeholder }) => (
   <input
     type={type}
@@ -18,57 +13,30 @@ const InputField = ({ type, name, value, onChange, placeholder }) => (
     placeholder={placeholder}
   />
 );
-
-const Modal = ({ id, onClose }) => {
-  const [addProduct, { isLoading: addLoading }] = useAddProductMutation();
-  const { data: getSingleProduct } = useGetSingleProductQuery(id);
-  const [selectImage, setSelectImage] = useState();
+const Modal = ({ onClose, getProducts, id }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const onCloseModel = () => {
+    if (!id) {
+      deleteImage();
+    }
+    setFormData({
+      name: "",
+      price: "",
+      discount: "",
+      detail: "",
+      flavor: "",
+      image: null,
+    });
+    onClose();
+  };
   const [formData, setFormData] = useState({
     name: "",
     price: "",
-    description: "",
     discount: "",
-    flavorType: "",
+    detail: "",
+    flavor: "",
     image: null,
   });
-  const updatePost = async (id, postData) => {
-    try {
-      const url = `${Config.serverApiUrl}products/${id}`;
-      const response = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: postData }),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        console.log("Post updated successfully:", data);
-      } else {
-        console.error("Error updating post:", response.statusText);
-        const errorData = await response.json();
-        console.error("Error details:", errorData);
-      }
-    } catch (error) {
-      console.error("Error:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (id && getSingleProduct) {
-      const { name, price, detail, discount, flavor, image } =
-        getSingleProduct.data.attributes;
-      const { url } = image?.data?.attributes?.formats?.small || { url: null };
-
-      setFormData({
-        name: name,
-        price: price,
-        description: detail,
-        discount: discount,
-        flavorType: flavor,
-        image: url,
-      });
-    }
-  }, [id, getSingleProduct]);
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -76,39 +44,74 @@ const Modal = ({ id, onClose }) => {
       [name]: value,
     }));
   };
-
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    setSelectImage(file);
+    if (!file) return;
+    setIsLoading(true);
+    const filesFolderRef = ref(
+      storage,
+      `inspireProductsImages/${file.name}${Date.now()}`
+    );
+    try {
+      await uploadBytes(filesFolderRef, file).then((snapshot) => {
+        console.log("Uploaded a blob or file!", snapshot);
+        getDownloadURL(snapshot.ref).then((url) => {
+          setFormData((prevData) => ({
+            ...prevData,
+            image: url,
+          }));
+        });
+      });
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const deleteImage = async () => {
+    if (!formData.image) return;
+    setIsLoading(true);
+    const imageRef = ref(storage, formData.image);
+    try {
+      await deleteDoc(imageRef);
+      setFormData((prevData) => ({
+        ...prevData,
+        image: null,
+      }));
+    } catch (error) {
+      console.error("Error deleting image:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  const deleteProduct = async () => {
+    if (!id) return;
+    setIsLoading(true);
+    try {
+      const productRef = doc(db, "products", id);
+      await deleteDoc(productRef);
+      getProducts();
+      onClose();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
+    if (!validateForm()) return;
+    setIsLoading(true);
     try {
-      if (!validateForm()) return;
-
-      const data = {
-        name: formData.name,
-        price: Number(formData.price),
-        detail: formData.description,
-        discount: Number(formData.discount),
-        flavor: formData.flavorType,
-        image: selectImage ? URL.createObjectURL(selectImage) : null,
-      };
-
-      if (id) {
-        await updatePost(id, data);
-        enqueueSnackbar("Product updated successfully", { variant: "success" });
-      } else {
-        await addProduct({ data: data });
-        enqueueSnackbar("Product added successfully", { variant: "success" });
-      }
-
+      const productRef = collection(db, "products");
+      await addDoc(productRef, formData);
+      getProducts();
       setFormData({
         name: "",
         price: "",
-        description: "",
+        detail: "",
         discount: "",
-        flavorType: "",
+        flavor: "",
         image: null,
       });
       onClose();
@@ -117,39 +120,48 @@ const Modal = ({ id, onClose }) => {
       enqueueSnackbar("An error occurred while processing the product", {
         variant: "error",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
-
   const validateForm = () => {
-    const { name, price, description, discount, flavorType, image } = formData;
-    if (
-      !name ||
-      !price ||
-      !description ||
-      !discount ||
-      !flavorType ||
-      (!selectImage && !image)
-    ) {
+    const { name, price, detail, discount, flavor, image } = formData;
+    if (!name || !price || !detail || !discount || !flavor || !image) {
       enqueueSnackbar("All fields are required", { variant: "error" });
       return false;
     }
     return true;
   };
-
-  const showImage = selectImage
-    ? URL.createObjectURL(selectImage)
-    : getSingleProduct?.data?.attributes?.image?.data?.attributes?.formats
-        ?.small?.url ||
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi_GoH2n5RWLY4_yw7wytfaj7X5VUoK9gmz3Mn2RTMBQ&s";
-  console.log(getSingleProduct, "getSingleProduct");
+  useEffect(() => {
+    const getSelectedProduct = async () => {
+      if (!id) return;
+      console.log(id);
+      const docRef = doc(db, "products", id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        setFormData(docSnap.data());
+        console.log("Document data:", docSnap.data());
+      }
+    };
+    getSelectedProduct();
+  }, []);
+  const showImage =
+    formData.image ||
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi_GoH2n5RWLY4_yw7wytfaj7X5VUoK9gmz3Mn2RTMBQ&s";
   return (
     <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
         <span className="text-[#303031] font-[500] text-[28px]">
           Edit Product
+          {id && (
+            <i
+              onClick={() => deleteProduct()}
+              className="ri-delete-bin-line text-[#EFB749] text-[24px]"
+            ></i>
+          )}
         </span>
         <span
-          onClick={onClose}
+          onClick={onCloseModel}
           className="text-[#303031] text-[24px] cursor-pointer"
         >
           X
@@ -170,11 +182,11 @@ const Modal = ({ id, onClose }) => {
         placeholder="Price"
       />
       <textarea
-        name="description"
-        value={formData.description}
+        name="detail"
+        value={formData.detail}
         onChange={handleChange}
         className="px-[16px] py-[14px] text-[#303031] bg-[#F9FAFB] outline-none placeholder:text-[#303031] border-[1px] border-[#EDF2F6] rounded-[8px] h-[200px] resize-none"
-        placeholder="Description"
+        placeholder="detail"
       />
       <div className="flex items-center gap-[16px] w-full">
         <input
@@ -187,8 +199,8 @@ const Modal = ({ id, onClose }) => {
         />
         <input
           type="text"
-          name="flavorType"
-          value={formData.flavorType}
+          name="flavor"
+          value={formData.flavor}
           onChange={handleChange}
           className="w-full px-[16px] py-[14px] text-[#303031] bg-[#F9FAFB] outline-none placeholder:text-[#303031] border-[1px] border-[#EDF2F6] rounded-[8px]"
           placeholder="Flavor Type"
@@ -200,40 +212,54 @@ const Modal = ({ id, onClose }) => {
           onChange={handleImageChange}
           className="absolute h-[100%] w-[100%] opacity-[0]"
         />
-        <div className="bg-[#EFB749] absolute top-2 right-2 rounded-[10px] p-[4px]">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="13"
-            height="13"
-            viewBox="0 0 13 13"
-            fill="none"
-          >
-            <path
-              d="M2.60372 8.05147L2.10156 10.0601L4.11019 9.55794L9.92807 3.74006C10.3203 3.34786 10.3203 2.71196 9.92807 2.31975L9.84191 2.23359C9.4497 1.84139 8.81381 1.84139 8.4216 2.2336L2.60372 8.05147Z"
-              stroke="#303031"
-              stroke-width="1.00431"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M2.60372 8.05282L2.10156 10.0614L4.11019 9.55929L9.13175 4.53772L7.62528 3.03125L2.60372 8.05282Z"
-              fill="#303031"
-            />
-            <path
-              d="M7.625 3.03125L9.13147 4.53772"
-              stroke="#303031"
-              stroke-width="1.00431"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M6.625 10.0625H10.6423"
-              stroke="#303031"
-              stroke-width="1.00431"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+        <div
+          className={`flex items-center gap-[8px] bg-[#EFB749] absolute  rounded-[10px] p-[4px] ${
+            formData.image ? "top-2 right-2" : "top-[50%] right-[50%]"
+          }`}
+        >
+          {formData?.image ? (
+            <>
+              <i
+                onClick={() => deleteImage()}
+                className="ri-delete-bin-line text-[14px] font-[600]"
+              ></i>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="13"
+                height="13"
+                viewBox="0 0 13 13"
+                fill="none"
+              >
+                <path
+                  d="M2.60372 8.05147L2.10156 10.0601L4.11019 9.55794L9.92807 3.74006C10.3203 3.34786 10.3203 2.71196 9.92807 2.31975L9.84191 2.23359C9.4497 1.84139 8.81381 1.84139 8.4216 2.2336L2.60372 8.05147Z"
+                  stroke="#303031"
+                  stroke-width="1.00431"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M2.60372 8.05282L2.10156 10.0614L4.11019 9.55929L9.13175 4.53772L7.62528 3.03125L2.60372 8.05282Z"
+                  fill="#303031"
+                />
+                <path
+                  d="M7.625 3.03125L9.13147 4.53772"
+                  stroke="#303031"
+                  stroke-width="1.00431"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M6.625 10.0625H10.6423"
+                  stroke="#303031"
+                  stroke-width="1.00431"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </>
+          ) : (
+            <i class="ri-file-add-line text-[24px] font-[600]"></i>
+          )}
         </div>
         <img src={showImage} alt="" className="" />
       </div>
@@ -241,7 +267,7 @@ const Modal = ({ id, onClose }) => {
         className="cursor-pointer text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
         onClick={handleSubmit}
       >
-        {addLoading ? "Loading..." : "Add New Product"}
+        {isLoading ? "Loading..." : "Add New Product"}
       </div>
     </div>
   );

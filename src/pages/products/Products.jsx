@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import Modal from "../../components/modal/Modal";
-import { useGetProductsQuery } from "../../redux/InspireApis";
 import Config from "../../constants/Index";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebase/firebase";
@@ -13,28 +12,25 @@ const Products = () => {
   const handleOpenModel = (id) => {
     setModel(true);
     setSelectedModelId(id || null);
-    console.log(id);
   };
-
   const handleCloseModel = () => {
     setModel(false);
     setSelectedModelId(null);
   };
+  const getProducts = async () => {
+    try {
+      const data = await getDocs(productsRef);
+      const filteredData = data.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+      setProducts(filteredData);
+      console.log(filteredData, "filteredData");
+    } catch (error) {
+      console.log(error);
+    }
+  };
   useEffect(() => {
-    const getProducts = async () => {
-      // Read the data
-      try {
-        const data = await getDocs(productsRef);
-        const filteredData = data.docs.map((doc) => ({
-          ...doc.data(),
-          id: doc.id,
-        }));
-        setProducts(filteredData);
-        console.log(filteredData, "filteredData");
-      } catch (error) {
-        console.log(error);
-      }
-    };
     getProducts();
   }, []);
   const findProductPrice = (discount, price) => {
@@ -42,9 +38,6 @@ const Products = () => {
       return price - (price * discount) / 100;
     }
     return price;
-  };
-  const handleRemove = async (id) => {
-    console.log(id, " remove id");
   };
   return (
     <div className="flex flex-col w-full px-[32px] gap-[32px]">
@@ -97,10 +90,6 @@ const Products = () => {
                 )}
               </div>
               <span className="flex gap-[16px] absolute top-[20px] right-[20px]">
-                <i
-                  onClick={() => handleRemove(id)}
-                  class="ri-delete-bin-line text-[#EFB749] text-[24px]"
-                ></i>
                 <div
                   onClick={() => handleOpenModel(id)}
                   className="cursor-pointer  gap-2 text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
@@ -145,7 +134,7 @@ const Products = () => {
           );
         })}
       </div>
-      {model && <Modal id={selectedModelId} onClose={handleCloseModel} />}{" "}
+      {model && <Modal getProducts={getProducts} id={selectedModelId} onClose={handleCloseModel} />}{" "}
       {/* Pass onClose handler to close the modal */}
     </div>
   );
