@@ -98,7 +98,6 @@ const Modal = ({ onClose, getProducts, id }) => {
       setIsLoading(false);
     }
   };
-
   const handleSubmit = async () => {
     if (!validateForm()) return;
     setIsLoading(true);
