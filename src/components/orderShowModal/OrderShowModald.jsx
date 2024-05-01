@@ -12,7 +12,7 @@ function OrderShowModald({ onClose, id }) {
       if (!id) return;
       setIsLoading(true);
       const docRef = doc(db, "orders", id);
-      const docSnap = await getDoc(docRef)
+      const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setSelectedOrder(docSnap.data());
         console.log("Document data:", docSnap.data());
@@ -21,17 +21,25 @@ function OrderShowModald({ onClose, id }) {
     };
     getSelectedOrder();
   }, []);
-  console.log(productsData, "productsData")
+  console.log(productsData, "productsData");
   return (
     <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] overflow-y-scroll shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
         <span className="text-[#303031] font-[500] text-[28px]">
           View Order Detail
         </span>
-        <i
-          onClick={onClose}
-          className="text-[#303031] text-[24px] cursor-pointer ri-close-line"
-        ></i>
+        {isLoading ? (
+          <img
+            src="https://miro.medium.com/v2/resize:fit:1104/1*pN5YHNX03fem8HWxnInQ3g.gif"
+            alt="loader"
+            className="w-[24px] h-[28px] object-cover border-0"
+          />
+        ) : (
+          <i
+            onClick={onClose}
+            className="text-[#303031] text-[24px] cursor-pointer ri-close-line"
+          ></i>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-[32px]">
         <div className="flex flex-col gap-[12px]">
@@ -62,11 +70,14 @@ function OrderShowModald({ onClose, id }) {
         </div>
       </div>
       {isLoading ? (
-        <div>Loading...</div>
+        <img
+          src="https://miro.medium.com/v2/resize:fit:1104/1*pN5YHNX03fem8HWxnInQ3g.gif"
+          alt="loader"
+          className="w-[300px] object-cover border-0"
+        />
       ) : (
         productsData?.map((product) => {
           const { id, name, price, image, qty, discount, flavor } = product;
-          console.log(product, "product");
           return (
             <>
               <div className="flex flex-col gap-[12px] w-full">

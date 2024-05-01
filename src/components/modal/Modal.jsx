@@ -134,18 +134,18 @@ const Modal = ({ onClose, getProducts, id }) => {
   useEffect(() => {
     const getSelectedProduct = async () => {
       if (!id) return;
-      console.log(id);
+      setIsLoading(true);
       const docRef = doc(db, "products", id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setFormData(docSnap.data());
         console.log("Document data:", docSnap.data());
       }
+      setIsLoading(false);
     };
     getSelectedProduct();
   }, []);
-  const showImage =
-    formData.image;
+  const showImage = formData.image;
   return (
     <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
@@ -158,12 +158,18 @@ const Modal = ({ onClose, getProducts, id }) => {
             ></i>
           )}
         </span>
-        <span
-          onClick={onCloseModel}
-          className="text-[#303031] text-[24px] cursor-pointer"
-        >
-          X
-        </span>
+        {isLoading ? (
+          <img
+            src="https://miro.medium.com/v2/resize:fit:1104/1*pN5YHNX03fem8HWxnInQ3g.gif"
+            alt="loader"
+            className="w-[28px] h-[28px] object-cover border-0"
+          />
+        ) : (
+          <i
+            onClick={onCloseModel}
+            className="text-[#303031] text-[24px] cursor-pointer ri-close-line"
+          ></i>
+        )}
       </div>
       <InputField
         type="text"
@@ -204,7 +210,13 @@ const Modal = ({ onClose, getProducts, id }) => {
           placeholder="Flavor Type"
         />
       </div>
-      <div className={`flex items-center rounded-[10px] overflow-hidden w-fit relative min-w-[260px] min-h-[110px] max-w-[260px] ${!formData?.image ? " border-[2px] border-dashed rounded-[10px] p-[4px] " : ""}`}>
+      <div
+        className={`flex items-center rounded-[10px] overflow-hidden w-fit relative min-w-[260px] min-h-[110px] max-w-[260px] ${
+          !formData?.image
+            ? " border-[2px] border-dashed rounded-[10px] p-[4px] "
+            : ""
+        }`}
+      >
         <input
           type="file"
           onChange={handleImageChange}
@@ -212,7 +224,7 @@ const Modal = ({ onClose, getProducts, id }) => {
         />
         <div
           className={`flex items-center gap-[8px] bg-[#EFB749] absolute  rounded-[10px] p-[4px] ${
-            formData.image ? "top-2 right-2" : "top-[24%] right-[44%] " 
+            formData.image ? "top-2 right-2" : "top-[24%] right-[44%] "
           }`}
         >
           {formData?.image ? (
