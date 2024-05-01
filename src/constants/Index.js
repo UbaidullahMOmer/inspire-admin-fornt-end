@@ -1,5 +1,5 @@
 const Config = {
-  serverApiUrl: "https://supportive-symphony-c9237ee9bb.strapiapp.com/api/",
+  serverApiUrl: "http://localhost:1337/api/",
   currency: "USD",
   currencySymbol: "$",
 };

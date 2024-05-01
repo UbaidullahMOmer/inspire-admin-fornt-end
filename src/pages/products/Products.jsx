@@ -1,27 +1,42 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Modal from "../../components/modal/Modal";
-import { useDeleteProductMutation, useGetProductsQuery } from "../../redux/InspireApis";
+import { useGetProductsQuery } from "../../redux/InspireApis";
 import Config from "../../constants/Index";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../firebase/firebase";
 
 const Products = () => {
-  const { data: products } = useGetProductsQuery();
-  const [model, setModel] = useState(false); // Initialize model state with false
-  const [selectedModelId, setSelectedModelId] = useState(null); // Initialize selectedModelId with null
-  const [removeProduct, { isLoading: isRemvoeLoading }] = useDeleteProductMutation()
+  const [products, setProducts] = useState([]);
+  const [model, setModel] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState(null);
+  const productsRef = collection(db, "products");
   const handleOpenModel = (id) => {
     setModel(true);
     setSelectedModelId(id || null);
-    console.log(id)
+    console.log(id);
   };
 
   const handleCloseModel = () => {
     setModel(false);
     setSelectedModelId(null);
   };
-
-  console.log(model, 'model')
-  const productsData = products?.data;
-
+  useEffect(() => {
+    const getProducts = async () => {
+      // Read the data
+      try {
+        const data = await getDocs(productsRef);
+        const filteredData = data.docs.map((doc) => ({
+          ...doc.data(),
+          id: doc.id,
+        }));
+        setProducts(filteredData);
+        console.log(filteredData, "filteredData");
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    getProducts();
+  }, []);
   const findProductPrice = (discount, price) => {
     if (discount) {
       return price - (price * discount) / 100;
@@ -29,55 +44,67 @@ const Products = () => {
     return price;
   };
   const handleRemove = async (id) => {
-    await removeProduct(id).then((res) => {
-      console.log(res, "res")
-    })
-  }
+    console.log(id, " remove id");
+  };
   return (
     <div className="flex flex-col w-full px-[32px] gap-[32px]">
       <div className="flex items-center w-full justify-between">
         <span className="text-[32px] font-[600] text-[#303031]">Orders</span>
-        <div onClick={() => handleOpenModel()} className="cursor-pointer text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]">
+        <div
+          onClick={() => handleOpenModel()}
+          className="cursor-pointer text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
+        >
           <span className="text-[20px]">+</span> Add New Product
         </div>
       </div>
       <div className="flex gap-[32px]">
-        {productsData?.map((productData, index) => {
-          const product = productData?.attributes;
-          const image = product?.image?.data?.attributes?.url;
+        {products?.map((productData, index) => {
+          const { name, detail, image, price, discount, id } = productData;
           return (
-            <div key={index} className="relative flex p-[16px] shadow-[0_4px_20px_-0px_rgba(0,0,0,0.1)] rounded-[10px] flex-col gap-[24px] max-w-[650px] pt-[64px]">
+            <div
+              key={index}
+              className="relative flex p-[16px] shadow-[0_4px_20px_-0px_rgba(0,0,0,0.1)] rounded-[10px] flex-col gap-[24px] max-w-[650px] pt-[64px]"
+            >
               <div className="w-full flex items-center justify-center">
                 <img
                   className="max-h-[360px] max-w-[240px] object-cover"
-                  src={image || "https://www.gasso.com/wp-content/uploads/2017/04/noimage.jpg"}
+                  src={
+                    image ||
+                    "https://www.gasso.com/wp-content/uploads/2017/04/noimage.jpg"
+                  }
                   alt=""
                 />
               </div>
               <div className="flex flex-col gap-[12px]">
                 <h1 className="text-[#303031] font-[600] text-[36px]">
-                  {product?.name}
+                  {name}
                 </h1>
-                <p className="text-[#737791] font-[500]">{product?.detail}</p>
+                <p className="text-[#737791] font-[500]">{detail}</p>
               </div>
               <div className="flex items-center gap-[24px]">
                 <span className="text-[#8D8D8D] text-[32px] line-through">
                   {Config.currencySymbol}
-                  {product?.price}
+                  {price}
                 </span>
                 <span className="text-[#303031] text-[48px]">
                   {Config.currencySymbol}
-                  {findProductPrice(product?.discount, product?.price)}
+                  {findProductPrice(discount, price)}
                 </span>
-                {product?.discount && (
+                {discount && (
                   <div className="text-[#FFF] font-[500] flex items-center justify-center p-[12px] bg-[#FF6058] rounded-[8px]">
-                    {product?.discount}% Discount
+                    {discount}% Discount
                   </div>
                 )}
               </div>
               <span className="flex gap-[16px] absolute top-[20px] right-[20px]">
-                <i onClick={()=> handleRemove(productData?.id)} class="ri-delete-bin-line text-[#EFB749] text-[24px]"></i>
-                <div onClick={() => handleOpenModel(productData?.id)} className="cursor-pointer  gap-2 text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]">
+                <i
+                  onClick={() => handleRemove(id)}
+                  class="ri-delete-bin-line text-[#EFB749] text-[24px]"
+                ></i>
+                <div
+                  onClick={() => handleOpenModel(id)}
+                  className="cursor-pointer  gap-2 text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
+                >
                   Edit
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -118,7 +145,8 @@ const Products = () => {
           );
         })}
       </div>
-      {model && <Modal id={selectedModelId} onClose={handleCloseModel} />} {/* Pass onClose handler to close the modal */}
+      {model && <Modal id={selectedModelId} onClose={handleCloseModel} />}{" "}
+      {/* Pass onClose handler to close the modal */}
     </div>
   );
 };

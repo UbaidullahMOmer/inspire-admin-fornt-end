@@ -3,7 +3,10 @@ import Config from "../constants/Index";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 export const inspireApis = createApi({
   reducerPath: "inspireApis",
-  baseQuery: fetchBaseQuery({ baseUrl: Config.serverApiUrl }),
+  baseQuery: fetchBaseQuery({ baseUrl: Config.serverApiUrl,
+    prepareHeaders: (headers) => {
+      headers.set("Content-Type", "application/json");
+    }}),
   tagTypes: ['getProducts', 'Orders'],
   endpoints: (builder) => ({
     getProducts: builder.query({
@@ -17,7 +20,7 @@ export const inspireApis = createApi({
       query: (data) => ({
         url: "products",
         method: "POST",
-        body: data,
+        body: JSON.stringify(data),
       }),
       invalidatesTags: ['getProducts'],
     }),

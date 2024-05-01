@@ -5,6 +5,8 @@ import {
   useUpdateProductMutation,
 } from "../../redux/InspireApis";
 import { enqueueSnackbar } from "notistack";
+import Config from "../../constants/Index";
+import axios from "axios";
 
 const InputField = ({ type, name, value, onChange, placeholder }) => (
   <input
@@ -19,10 +21,8 @@ const InputField = ({ type, name, value, onChange, placeholder }) => (
 
 const Modal = ({ id, onClose }) => {
   const [addProduct, { isLoading: addLoading }] = useAddProductMutation();
-  const [updateProduct, { isLoading: updateLoading }] =
-    useUpdateProductMutation();
   const { data: getSingleProduct } = useGetSingleProductQuery(id);
-  const [selectImage, setSelectImage] = useState()
+  const [selectImage, setSelectImage] = useState();
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -31,19 +31,40 @@ const Modal = ({ id, onClose }) => {
     flavorType: "",
     image: null,
   });
+  const updatePost = async (id, postData) => {
+    try {
+      const url = `${Config.serverApiUrl}products/${id}`;
+      const response = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: postData }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Post updated successfully:", data);
+      } else {
+        console.error("Error updating post:", response.statusText);
+        const errorData = await response.json();
+        console.error("Error details:", errorData);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
 
   useEffect(() => {
     if (id && getSingleProduct) {
-      const { name, price, detail, discount, flavor, image } = getSingleProduct.data.attributes;
+      const { name, price, detail, discount, flavor, image } =
+        getSingleProduct.data.attributes;
       const { url } = image?.data?.attributes?.formats?.small || { url: null };
 
       setFormData({
-        name,
-        price,
+        name: name,
+        price: price,
         description: detail,
-        discount,
+        discount: discount,
         flavorType: flavor,
-        image: url
+        image: url,
       });
     }
   }, [id, getSingleProduct]);
@@ -66,18 +87,16 @@ const Modal = ({ id, onClose }) => {
       if (!validateForm()) return;
 
       const data = {
-        "data": {
-          name: formData.name,
-          price: Number(formData.price),
-          detail: formData.description,
-          discount: Number(formData.discount),
-          flavor: formData.flavorType,
-          image: selectImage ? URL.createObjectURL(selectImage) : null,
-        }
+        name: formData.name,
+        price: Number(formData.price),
+        detail: formData.description,
+        discount: Number(formData.discount),
+        flavor: formData.flavorType,
+        image: selectImage ? URL.createObjectURL(selectImage) : null,
       };
 
       if (id) {
-        await updateProduct({ id, data: data });
+        await updatePost(id, data);
         enqueueSnackbar("Product updated successfully", { variant: "success" });
       } else {
         await addProduct({ data: data });
@@ -92,7 +111,7 @@ const Modal = ({ id, onClose }) => {
         flavorType: "",
         image: null,
       });
-      onClose()
+      onClose();
     } catch (error) {
       console.error("Error submitting product:", error);
       enqueueSnackbar("An error occurred while processing the product", {
@@ -102,21 +121,39 @@ const Modal = ({ id, onClose }) => {
   };
 
   const validateForm = () => {
-    const { name, price, description, discount, flavorType, } = formData;
-    if (!name || !price || !description || !discount || !flavorType || !selectImage) {
+    const { name, price, description, discount, flavorType, image } = formData;
+    if (
+      !name ||
+      !price ||
+      !description ||
+      !discount ||
+      !flavorType ||
+      (!selectImage && !image)
+    ) {
       enqueueSnackbar("All fields are required", { variant: "error" });
       return false;
     }
     return true;
   };
 
-  const showImage = selectImage ? URL.createObjectURL(selectImage) : getSingleProduct?.data?.attributes?.image?.data?.attributes?.formats?.small?.url || "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi_GoH2n5RWLY4_yw7wytfaj7X5VUoK9gmz3Mn2RTMBQ&s"
-  console.log(getSingleProduct, "getSingleProduct")
+  const showImage = selectImage
+    ? URL.createObjectURL(selectImage)
+    : getSingleProduct?.data?.attributes?.image?.data?.attributes?.formats
+        ?.small?.url ||
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi_GoH2n5RWLY4_yw7wytfaj7X5VUoK9gmz3Mn2RTMBQ&s";
+  console.log(getSingleProduct, "getSingleProduct");
   return (
     <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
-        <span className="text-[#303031] font-[500] text-[28px]">Edit Product</span>
-        <span onClick={onClose} className="text-[#303031] text-[24px] cursor-pointer">X</span>
+        <span className="text-[#303031] font-[500] text-[28px]">
+          Edit Product
+        </span>
+        <span
+          onClick={onClose}
+          className="text-[#303031] text-[24px] cursor-pointer"
+        >
+          X
+        </span>
       </div>
       <InputField
         type="text"
@@ -158,7 +195,11 @@ const Modal = ({ id, onClose }) => {
         />
       </div>
       <div className="flex items-center rounded-[10px] overflow-hidden w-fit relative max-w-[260px]">
-        <input type="file" onChange={handleImageChange} className="absolute h-[100%] w-[100%] opacity-[0]" />
+        <input
+          type="file"
+          onChange={handleImageChange}
+          className="absolute h-[100%] w-[100%] opacity-[0]"
+        />
         <div className="bg-[#EFB749] absolute top-2 right-2 rounded-[10px] p-[4px]">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -200,7 +241,7 @@ const Modal = ({ id, onClose }) => {
         className="cursor-pointer text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
         onClick={handleSubmit}
       >
-        {addLoading || updateLoading ? "Loading..." : "Add New Product"}
+        {addLoading ? "Loading..." : "Add New Product"}
       </div>
     </div>
   );
