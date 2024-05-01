@@ -145,8 +145,7 @@ const Modal = ({ onClose, getProducts, id }) => {
     getSelectedProduct();
   }, []);
   const showImage =
-    formData.image ||
-    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSi_GoH2n5RWLY4_yw7wytfaj7X5VUoK9gmz3Mn2RTMBQ&s";
+    formData.image;
   return (
     <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
@@ -205,7 +204,7 @@ const Modal = ({ onClose, getProducts, id }) => {
           placeholder="Flavor Type"
         />
       </div>
-      <div className="flex items-center rounded-[10px] overflow-hidden w-fit relative max-w-[260px]">
+      <div className={`flex items-center rounded-[10px] overflow-hidden w-fit relative min-w-[260px] min-h-[110px] max-w-[260px] ${!formData?.image ? " border-[2px] border-dashed rounded-[10px] p-[4px] " : ""}`}>
         <input
           type="file"
           onChange={handleImageChange}
@@ -213,15 +212,11 @@ const Modal = ({ onClose, getProducts, id }) => {
         />
         <div
           className={`flex items-center gap-[8px] bg-[#EFB749] absolute  rounded-[10px] p-[4px] ${
-            formData.image ? "top-2 right-2" : "top-[50%] right-[50%]"
+            formData.image ? "top-2 right-2" : "top-[24%] right-[44%] " 
           }`}
         >
           {formData?.image ? (
             <>
-              <i
-                onClick={() => deleteImage()}
-                className="ri-delete-bin-line text-[14px] font-[600]"
-              ></i>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="13"
@@ -257,7 +252,7 @@ const Modal = ({ onClose, getProducts, id }) => {
               </svg>
             </>
           ) : (
-            <i class="ri-file-add-line text-[24px] font-[600]"></i>
+            <i class="ri-file-add-line text-[32px] font-[600] text-[#303031]"></i>
           )}
         </div>
         <img src={showImage} alt="" className="" />
