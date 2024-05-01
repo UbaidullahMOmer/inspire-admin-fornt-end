@@ -12,13 +12,12 @@ function OrderShowModald({ onClose, id }) {
       if (!id) return;
       setIsLoading(true);
       const docRef = doc(db, "orders", id);
-      const docSnap = await getDoc(docRef).then((docSnap) => {
-        setIsLoading(false);
-      });
+      const docSnap = await getDoc(docRef)
       if (docSnap.exists()) {
         setSelectedOrder(docSnap.data());
         console.log("Document data:", docSnap.data());
       }
+      setIsLoading(false);
     };
     getSelectedOrder();
   }, []);
