@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { enqueueSnackbar } from "notistack";
-import { collection, addDoc, deleteDoc, getDoc, doc } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, getDoc, doc, updateDoc } from "firebase/firestore";
 import { db, storage } from "../../firebase/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 const InputField = ({ type, name, value, onChange, placeholder }) => (
@@ -102,8 +102,13 @@ const Modal = ({ onClose, getProducts, id }) => {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      const productRef = collection(db, "products");
-      await addDoc(productRef, formData);
+      const addProductRef = collection(db, "products");
+      const updateProductRef = doc(db, "products", id);
+      if(id){
+        await updateDoc(updateProductRef, formData);
+      }else{
+        await addDoc(addProductRef, formData);
+      }
       getProducts();
       setFormData({
         name: "",
@@ -273,7 +278,7 @@ const Modal = ({ onClose, getProducts, id }) => {
         className="cursor-pointer text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
         onClick={handleSubmit}
       >
-        {isLoading ? "Loading..." : "Add New Product"}
+        {isLoading ? "Loading..." : id ? "Update Product" : "Add New Product"}
       </div>
     </div>
   );
