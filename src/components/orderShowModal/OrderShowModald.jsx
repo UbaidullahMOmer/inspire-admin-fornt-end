@@ -4,7 +4,7 @@ import { db } from "../../firebase/firebase";
 import { doc, getDoc } from "firebase/firestore";
 function OrderShowModald({ onClose, id }) {
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const { email, phoneNumber, totalPrice, userName, address, productsData } =
+  const { email, phoneNumber, totalPrice, userName, address, products } =
     selectedOrder || {};
   const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
@@ -21,7 +21,8 @@ function OrderShowModald({ onClose, id }) {
     };
     getSelectedOrder();
   }, []);
-  console.log(productsData, "productsData");
+  console.log(products, "products");
+  console.log(selectedOrder, "selectedOrder");
   return (
     <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] overflow-y-scroll shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
@@ -76,7 +77,7 @@ function OrderShowModald({ onClose, id }) {
           className="w-[300px] object-cover border-0"
         />
       ) : (
-        productsData?.map((product) => {
+        products?.map((product) => {
           const { id, name, price, image, qty, discount, flavor } = product;
           return (
             <>

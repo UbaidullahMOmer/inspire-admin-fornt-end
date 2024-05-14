@@ -32,6 +32,7 @@ const OrderInfo = () => {
   useEffect(() => {
     getOrders();
   }, []);
+  console.log(orders)
   return (
     <div className="flex flex-col gap-[32px] pr-[20px] relative w-full h-full">
       <span className="text-[32px] font-[600] text-[#303031]">Orders</span>
