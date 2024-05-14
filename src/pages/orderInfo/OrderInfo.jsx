@@ -45,7 +45,7 @@ const OrderInfo = () => {
       ) : (
         <div className="flex flex-col gap-[16px] w-full">
           <div className="flex items-center w-full px-[24px] py-[16px]">
-            {/* <span className="text-[#737791] font-[500] w-full">Date</span> */}
+            <span className="text-[#737791] font-[500] w-full">Date</span>
             <span className="text-[#737791] font-[500] w-full">Name</span>
             <span className="text-[#737791] font-[500] w-full">Email</span>
             <span className="text-[#737791] font-[500] w-full">Phone</span>
@@ -54,17 +54,23 @@ const OrderInfo = () => {
             <span className="w-[94px]"></span>
           </div>
           {orders?.map((order) => {
-            const { email, phone, totalPrice, name, address } =
+            const { email, phone, totalPrice, name, address, date } =
               order || {};
-              console.log(order)
+              const dateF = new Date(parseInt(date));
+              const day = dateF.getDate().toString().padStart(2, '0');
+              const month = (dateF.getMonth() + 1).toString().padStart(2, '0');
+              const year = dateF.getFullYear();
+            
+              // Formatted date string
+              const formattedDate = `${day}/${month}/${year}`;
             return (
               <div
                 onClick={() => handleModel(order.id)}
                 className="flex items-center px-[24px] py-[16px] bg-[#FFF] rounded-[8px] shadow-[0_4px_40px_-0px_rgba(0,0,0,0.1)]"
               >
-                {/* <span className="text-[#303031] font-[500] w-full">
-                  02/07/2022
-                </span> */}
+                <span className="text-[#303031] font-[500] w-full">
+                  {formattedDate}
+                </span>
                 <span className="text-[#303031] font-[500] w-full">
                   {name}
                 </span>
