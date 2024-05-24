@@ -53,8 +53,7 @@ const OrderInfo = () => {
             <span className="w-[94px]"></span>
           </div>
           {orders?.map((order) => {
-            const { email, phoneNumber, totalPrice, userName, address } =
-              order || {};
+            const { email, phone, totalPrice, name, address } = order || {};
             return (
               <div
                 onClick={() => handleModel(order.id)}
@@ -63,14 +62,12 @@ const OrderInfo = () => {
                 <span className="text-[#303031] font-[500] w-full">
                   02/07/2022
                 </span>
-                <span className="text-[#303031] font-[500] w-full">
-                  {userName}
-                </span>
+                <span className="text-[#303031] font-[500] w-full">{name}</span>
                 <span className="text-[#303031] font-[500] w-full">
                   {email}
                 </span>
                 <span className="text-[#303031] font-[500] w-full">
-                  {phoneNumber}
+                  {phone}
                 </span>
                 <span className="text-[#303031] font-[500] w-full">
                   ${totalPrice}
