@@ -32,6 +32,7 @@ const OrderInfo = () => {
   useEffect(() => {
     getOrders();
   }, []);
+  console.log(orders)
   return (
     <div className="flex flex-col gap-[32px] pr-[20px] relative w-full h-full">
       <span className="text-[32px] font-[600] text-[#303031]">Orders</span>
@@ -53,16 +54,26 @@ const OrderInfo = () => {
             <span className="w-[94px]"></span>
           </div>
           {orders?.map((order) => {
-            const { email, phone, totalPrice, name, address } = order || {};
+            const { email, phone, totalPrice, name, address, date } =
+              order || {};
+              const dateF = new Date(parseInt(date));
+              const day = dateF.getDate().toString().padStart(2, '0');
+              const month = (dateF.getMonth() + 1).toString().padStart(2, '0');
+              const year = dateF.getFullYear();
+            
+              // Formatted date string
+              const formattedDate = `${day}/${month}/${year}`;
             return (
               <div
                 onClick={() => handleModel(order.id)}
-                className="flex items-center px-[24px] py-[16px] bg-[#FFF] rounded-[8px] shadow-[0_4px_20px_-0px_rgba(0,0,0,0.05)]"
+                className="flex items-center px-[24px] py-[16px] bg-[#FFF] rounded-[8px] shadow-[0_4px_40px_-0px_rgba(0,0,0,0.1)]"
               >
                 <span className="text-[#303031] font-[500] w-full">
-                  02/07/2022
+                  {formattedDate}
                 </span>
-                <span className="text-[#303031] font-[500] w-full">{name}</span>
+                <span className="text-[#303031] font-[500] w-full">
+                  {name}
+                </span>
                 <span className="text-[#303031] font-[500] w-full">
                   {email}
                 </span>

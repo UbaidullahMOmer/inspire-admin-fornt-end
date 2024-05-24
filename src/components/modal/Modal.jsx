@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { enqueueSnackbar } from "notistack";
-import { collection, addDoc, deleteDoc, getDoc, doc } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, getDoc, doc, updateDoc } from "firebase/firestore";
 import { db, storage } from "../../firebase/firebase";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 const InputField = ({ type, name, value, onChange, placeholder }) => (
@@ -102,8 +102,13 @@ const Modal = ({ onClose, getProducts, id }) => {
     if (!validateForm()) return;
     setIsLoading(true);
     try {
-      const productRef = collection(db, "products");
-      await addDoc(productRef, formData);
+      const addProductRef = collection(db, "products");
+      const updateProductRef = doc(db, "products", id);
+      if(id){
+        await updateDoc(updateProductRef, formData);
+      }else{
+        await addDoc(addProductRef, formData);
+      }
       getProducts();
       setFormData({
         name: "",
@@ -150,7 +155,7 @@ const Modal = ({ onClose, getProducts, id }) => {
     <div className="fixed flex p-[20px] bg-[#FFF] w-[800px] h-[700px] shadow-[0_4px_20px_1000px_rgba(0,0,0,0.6)] rounded-[10px] flex-col gap-[24px] top-[50%] left-[50%] -translate-x-[50%] -translate-y-[50%]">
       <div className="flex items-center justify-between">
         <span className="text-[#303031] font-[500] text-[28px]">
-          Edit Product
+          {id? "Edit Product":  "Add New Product"}
           {id && (
             <i
               onClick={() => deleteProduct()}
@@ -273,7 +278,7 @@ const Modal = ({ onClose, getProducts, id }) => {
         className="cursor-pointer text-[#303031] font-[500] flex items-center justify-center p-[12px] bg-[#EFB749] rounded-[8px]"
         onClick={handleSubmit}
       >
-        {isLoading ? "Loading..." : "Add New Product"}
+        {isLoading ? "Loading..." : id ? "Update Product" : "Add New Product"}
       </div>
     </div>
   );
